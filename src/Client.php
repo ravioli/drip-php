@@ -22,6 +22,8 @@ class Client
     protected $account_id = '';
     /** @var string */
     protected $api_end_point = 'https://api.getdrip.com/v2/';
+    /** @var string */
+    protected $shoppers_api_end_point = 'https://api.getdrip.com/v3/';
     /** @var integer */
     protected $timeout = 30;
     /** @var integer */
@@ -49,6 +51,9 @@ class Client
     {
         if (\array_key_exists('api_end_point', $options)) {
             $this->api_end_point = $options['api_end_point'];
+        }
+        if (\array_key_exists('shoppers_api_end_point', $options)) {
+            $this->shoppers_api_end_point = $options['shoppers_api_end_point'];
         }
         // NOTE: For testing. Could break at any time, please do not depend on this.
         if (\array_key_exists('guzzle_stack_constructor', $options)) {
@@ -296,6 +301,78 @@ class Client
         return $this->make_request("$this->account_id/events", $req_params, self::POST);
     }
 
+     /**
+     *
+     * Posts Order activity.
+     *
+     * @param array $params
+     * @param bool
+     */
+    public function create_or_update_order($params)
+    {
+        if (empty($params['provider'])) {
+            throw new InvalidArgumentException("Provider was not specified");
+        }
+        if (empty($params['action'])) {
+            throw new InvalidArgumentException("Action was not specified");
+        }
+        
+        return $this->make_request("$this->account_id/shopper_activity/order", $params, self::POST, $this->shoppers_api_end_point);
+    }
+
+     /**
+     *
+     * Posts Cart activity.
+     *
+     * @param array $params
+     * @param bool
+     */
+    public function create_or_update_cart($params)
+    {
+        if (empty($params['provider'])) {
+            throw new InvalidArgumentException("Provider was not specified");
+        }
+        if (empty($params['action'])) {
+            throw new InvalidArgumentException("Action was not specified");
+        }
+        if (empty($params['cart_id'])) {
+            throw new InvalidArgumentException("Cart Id was not specified");
+        }
+        if (empty($params['cart_url'])) {
+            throw new InvalidArgumentException("Cart Url was not specified");
+        }
+        
+        return $this->make_request("$this->account_id/shopper_activity/cart", $params, self::POST, $this->shoppers_api_end_point);
+    }    
+    
+     /**
+     *
+     * Posts Product activity.
+     *
+     * @param array $params
+     * @param bool
+     */
+    public function create_or_update_product($params)
+    {
+        if (empty($params['provider'])) {
+            throw new InvalidArgumentException("Provider was not specified");
+        }
+        if (empty($params['action'])) {
+            throw new InvalidArgumentException("Action was not specified");
+        }
+        if (empty($params['product_id'])) {
+            throw new InvalidArgumentException("Product Id was not specified");
+        }
+        if (empty($params['name'])) {
+            throw new InvalidArgumentException("Name was not specified");
+        }
+        if (empty($params['price'])) {
+            throw new InvalidArgumentException("Price was not specified");
+        }
+        
+        return $this->make_request("$this->account_id/shopper_activity/product", $params, self::POST, $this->shoppers_api_end_point);
+    }  
+    
     /**
      * @return string
      */
@@ -323,7 +400,7 @@ class Client
      * @return \Drip\ResponseInterface
      * @throws Exception
      */
-    protected function make_request($url, $params = array(), $req_method = self::GET)
+    protected function make_request($url, $params = array(), $req_method = self::GET, $base_uri = null)
     {
         if ($this->guzzle_stack_constructor) {
             // This can be replaced with `($this->guzzle_stack_constructor)()` once we drop PHP5 support.
@@ -335,7 +412,7 @@ class Client
             // @codeCoverageIgnoreEnd
         }
         $client = new \GuzzleHttp\Client([
-            'base_uri' => $this->api_end_point,
+            'base_uri' => $base_uri ? $base_uri : $this->api_end_point,
             'handler' => $stack,
         ]);
 
@@ -346,7 +423,7 @@ class Client
             'headers' => [
                 'User-Agent' => $this->user_agent(),
                 'Accept' => 'application/json, text/javascript, */*; q=0.01',
-                'Content-Type' => 'application/vnd.api+json',
+                'Content-Type' => 'application/json',
             ],
             'http_errors' => false,
         ];
